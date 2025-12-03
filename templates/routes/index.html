@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Flight Routes{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Add Airport Route</h5>
+                <form action="/add/" method="post">
+                        {% csrf_token %}
+                        <div class="mb-2">{{ add_form.airport_code.label_tag }} {{ add_form.airport_code }}</div>
+                        <div class="mb-2">{{ add_form.position.label_tag }} {{ add_form.position }}</div>
+                        <div class="mb-2">{{ add_form.duration.label_tag }} {{ add_form.duration }}</div>
+                        <button class="btn btn-primary" type="submit">Add</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Search Nth Node</h5>
+                <form action="/find-nth/" method="get" class="row g-2">
+                    <div class="col-6">{{ nth_form.airport_code.label_tag }} {{ nth_form.airport_code }}</div>
+                    <div class="col-3">{{ nth_form.direction.label_tag }} {{ nth_form.direction }}</div>
+                    <div class="col-3">{{ nth_form.n.label_tag }} {{ nth_form.n }}</div>
+                    <div class="col-12 mt-2"><button class="btn btn-outline-secondary" type="submit">Search</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Shortest Between Airports</h5>
+                <form action="/shortest-between/" method="get" class="row g-2">
+                    <div class="col-6">{{ between_form.airport_code_a.label_tag }} {{ between_form.airport_code_a }}</div>
+                    <div class="col-6">{{ between_form.airport_code_b.label_tag }} {{ between_form.airport_code_b }}</div>
+                    <div class="col-12 mt-2"><button class="btn btn-outline-secondary" type="submit">Search</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-3 chart-card">
+            <div class="card-body">
+                <h5 class="card-title">Route Positions (Duration by Position)</h5>
+            <canvas id="routeChart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">All Routes</h5>
+                <ul class="list-group">
+                    {% for r in routes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div><strong>{{ r.position }}</strong> {{ r.airport_code }}</div>
+                            <span class="badge bg-secondary">{{ r.duration }}m</span>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">No routes yet.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+                (function(){
+                    const raw = {{ routes_json|default:'[]'|safe }};
+                    const routeData = Array.isArray(raw) ? raw : JSON.parse(raw || '[]');
+                    const labels = routeData.map(r => r.airport_code + ' (pos ' + r.position + ')');
+                    const durations = routeData.map(r => r.duration);
+                    function createChart(canvasId, labels, data, color){
+                        const canvas = document.getElementById(canvasId);
+                        if(!canvas) return;
+                        const existing = Chart.getChart(canvasId);
+                        if(existing) existing.destroy();
+                        return new Chart(canvas, { type:'bar', data:{ labels, datasets:[{ label:'Duration (min)', data, backgroundColor: color || 'rgba(13,110,253,0.7)'}] }, options:{ responsive:true, maintainAspectRatio:true, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ display:false } } } });
+                    }
+                    createChart('routeChart', labels, durations, 'rgba(13,110,253,0.7)');
+                })();
+</script>
+{% endblock %}

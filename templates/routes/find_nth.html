@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Find Nth Node{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Find Nth Left/Right Node</h5>
+                    <form method="get">
+                        <div class="mb-2">{{ form.airport_code.label_tag }} {{ form.airport_code }}</div>
+                        <div class="mb-2">{{ form.direction.label_tag }} {{ form.direction }}</div>
+                        <div class="mb-2">{{ form.n.label_tag }} {{ form.n }}</div>
+                        <button class="btn btn-primary" type="submit">Search</button>
+                        <a class="btn btn-link" href="/">Back</a>
+                    </form>
+
+                    {% if error %}
+                        <div class="alert alert-warning mt-3">{{ error }}</div>
+                    {% endif %}
+
+                    {% if result %}
+                        <div class="mt-3">
+                            <h6>Result</h6>
+                            <p>{{ result }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Nearby Positions</h5>
+                    <canvas id="nthChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+        (function(){
+            const raw = {{ routes_json|default:'[]'|safe }};
+            const routeData = Array.isArray(raw) ? raw : JSON.parse(raw || '[]');
+            const labels = routeData.map(r => r.position + ': ' + r.airport_code);
+            const durations = routeData.map(r => r.duration);
+            const highlightPos = {% if result %}{{ result.position }}{% else %}null{% endif %};
+            const highlightIndex = routeData.findIndex(r => r.position === highlightPos);
+            function createChart(canvasId, labels, data, colorMap){
+                const canvas = document.getElementById(canvasId);
+                if(!canvas) return;
+                const existing = Chart.getChart(canvasId);
+                if(existing) existing.destroy();
+                return new Chart(canvas, { type:'bar', data:{ labels, datasets:[{ data, backgroundColor: colorMap }] }, options:{ responsive:true, maintainAspectRatio:true, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ display:false } } } });
+            }
+            const bg = durations.map((_,i)=> i===highlightIndex? 'rgba(220,53,69,0.9)' : 'rgba(13,110,253,0.7)');
+            createChart('nthChart', labels, durations, bg);
+        })();
+</script>
+{% endblock %}

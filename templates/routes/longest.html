@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Longest Node{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Longest Node (by duration)</h5>
+                    {% if node %}
+                        <p><strong>{{ node.airport_code }}</strong> — position {{ node.position }} — {{ node.duration }}m</p>
+                    {% else %}
+                        <p>No nodes available.</p>
+                    {% endif %}
+                    <a class="btn btn-link" href="/">Back</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">All Routes</h5>
+                      <canvas id="longestChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+            (function(){
+                const raw = {{ routes_json|default:'[]'|safe }};
+                const routeData = Array.isArray(raw) ? raw : JSON.parse(raw || '[]');
+                const labels = routeData.map(r => r.airport_code + ' (pos ' + r.position + ')');
+                const durations = routeData.map(r => r.duration);
+                const maxIndex = durations.indexOf(Math.max(...durations));
+                function createChart(canvasId, labels, data, colorMap){
+                    const canvas = document.getElementById(canvasId);
+                    if(!canvas) return;
+                    const existing = Chart.getChart(canvasId);
+                    if(existing) existing.destroy();
+                    return new Chart(canvas, { type:'bar', data:{ labels, datasets:[{ data, backgroundColor: colorMap }] }, options:{ responsive:true, maintainAspectRatio:true, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ display:false } } } });
+                }
+                const bg = durations.map((_,i)=> i===maxIndex? 'rgba(25,135,84,0.9)' : 'rgba(13,110,253,0.7)');
+                createChart('longestChart', labels, durations, bg);
+            })();
+</script>
+{% endblock %}
