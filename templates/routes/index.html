@@ -43,10 +43,20 @@
     </div>
 
     <div class="col-lg-6">
-        <div class="card mb-3 chart-card">
+        <div class="card mb-3 result-card">
             <div class="card-body">
                 <h5 class="card-title">Route Positions (Duration by Position)</h5>
-            <canvas id="routeChart" class="chart-canvas"></canvas>
+                {% if total_routes %}
+                    <p class="mb-1"><strong>Total routes:</strong> {{ total_routes }}</p>
+                    <p class="mb-1"><strong>Longest duration:</strong>
+                        {% if longest_node %} {{ longest_node.airport_code }} (pos {{ longest_node.position }}) — {{ longest_node.duration }} mins{% else %}N/A{% endif %}
+                    </p>
+                    <p class="mb-0"><strong>Shortest duration:</strong>
+                        {% if shortest_node %} {{ shortest_node.airport_code }} (pos {{ shortest_node.position }}) — {{ shortest_node.duration }} mins{% else %}N/A{% endif %}
+                    </p>
+                {% else %}
+                    <p class="text-muted small">No routes yet — add a route to get started.</p>
+                {% endif %}
             </div>
         </div>
 
@@ -68,23 +78,4 @@
     </div>
 </div>
 
-{% endblock %}
-
-{% block extra_js %}
-<script>
-                (function(){
-                    const raw = {{ routes_json|default:'[]'|safe }};
-                    const routeData = Array.isArray(raw) ? raw : JSON.parse(raw || '[]');
-                    const labels = routeData.map(r => r.airport_code + ' (pos ' + r.position + ')');
-                    const durations = routeData.map(r => r.duration);
-                    function createChart(canvasId, labels, data, color){
-                        const canvas = document.getElementById(canvasId);
-                        if(!canvas) return;
-                        const existing = Chart.getChart(canvasId);
-                        if(existing) existing.destroy();
-                        return new Chart(canvas, { type:'bar', data:{ labels, datasets:[{ label:'Duration (min)', data, backgroundColor: color || 'rgba(13,110,253,0.7)'}] }, options:{ responsive:true, maintainAspectRatio:true, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ display:false } } } });
-                    }
-                    createChart('routeChart', labels, durations, 'rgba(13,110,253,0.7)');
-                })();
-</script>
 {% endblock %}

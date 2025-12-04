@@ -3,7 +3,6 @@ from django.db.models import Min, Max
 from django.contrib import messages
 from .models import AirportRoute
 from .forms import AddRouteForm, NthSearchForm, BetweenAirportsForm
-import json
 
 
 def index(request):
@@ -13,14 +12,18 @@ def index(request):
     nth_form = NthSearchForm()
     between_form = BetweenAirportsForm()
 
-    # Prepare JSON-serializable data for Chart.js
-    routes = list(routes_qs.values('airport_code', 'position', 'duration'))
+    # Prepare route queryset for display (no chart payload)
+    total_routes = routes_qs.count()
+    longest = AirportRoute.objects.order_by('-duration').first()
+    shortest = AirportRoute.objects.order_by('duration').first()
     context = {
         'routes': routes_qs,
         'add_form': add_form,
         'nth_form': nth_form,
         'between_form': between_form,
-        'routes_json': json.dumps(routes),
+        'total_routes': total_routes,
+        'longest_node': longest,
+        'shortest_node': shortest,
     }
     return render(request, 'routes/index.html', context)
 
@@ -37,7 +40,6 @@ def add_route(request):
 def find_nth(request):
     result = None
     error = None
-    routes_json = '[]'
     if request.method == 'GET':
         form = NthSearchForm(request.GET)
         if form.is_valid():
@@ -59,31 +61,24 @@ def find_nth(request):
                 except AirportRoute.DoesNotExist:
                     error = f'No node found at position {target_pos}.'
                 else:
-                    # prepare a small context window around the target for charting
+                    # prepare a small context window around the target for display
                     lo = max(1, target_pos - 3)
                     hi = target_pos + 3
                     window = list(AirportRoute.objects.filter(position__gte=lo, position__lte=hi).values('airport_code', 'position', 'duration'))
-                    import json
-                    routes_json = json.dumps(window)
     else:
         form = NthSearchForm()
-    return render(request, 'routes/find_nth.html', {'form': form, 'result': result, 'error': error, 'routes_json': routes_json})
+    return render(request, 'routes/find_nth.html', {'form': form, 'result': result, 'error': error, 'window': window if 'window' in locals() else None})
 
 
 def longest_node(request):
     # Find node with maximum duration
     node = AirportRoute.objects.order_by('-duration').first()
-    # prepare all routes for charting and mark the longest
-    all_routes = list(AirportRoute.objects.all().values('airport_code', 'position', 'duration'))
-    import json
-    routes_json = json.dumps(all_routes)
-    return render(request, 'routes/longest.html', {'node': node, 'routes_json': routes_json})
+    return render(request, 'routes/longest.html', {'node': node})
 
 
 def shortest_between(request):
     result = None
     error = None
-    routes_json = '[]'
     if request.method == 'GET':
         form = BetweenAirportsForm(request.GET)
         if form.is_valid():
@@ -104,9 +99,6 @@ def shortest_between(request):
                     position__lte=hi
                 ).values('airport_code', 'position', 'duration'))
                 
-                import json
-                routes_json = json.dumps(nodes_in_range)
-                
                 if nodes_in_range:
                     # Find the node with minimum duration value in the range
                     # "Duration" here represents a node attribute (e.g., processing time at that airport)
@@ -119,4 +111,4 @@ def shortest_between(request):
                         result = None
     else:
         form = BetweenAirportsForm()
-    return render(request, 'routes/shortest_between.html', {'form': form, 'result': result, 'error': error, 'routes_json': routes_json})
+    return render(request, 'routes/shortest_between.html', {'form': form, 'result': result, 'error': error, 'nodes_in_range': nodes_in_range if 'nodes_in_range' in locals() else None})
